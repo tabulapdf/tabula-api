@@ -1,0 +1,4 @@
+document1:
+  uuid: 8cf52024-1ab8-4ec2-8fb2-c7605417e564
+  path: /tmp/foo
+  pages: [page_1]

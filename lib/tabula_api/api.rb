@@ -1,4 +1,4 @@
-module TabulaAPI
+module TabulaApi
   class REST < Grape::API
     version 'v1', using: :header, vendor: 'tabula'
     format :json

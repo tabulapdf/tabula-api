@@ -10,5 +10,7 @@ platform :jruby do
 
   group :development do
     gem 'rake'
+    gem 'rack-test'
+    gem 'fixture_dependencies'
   end
 end

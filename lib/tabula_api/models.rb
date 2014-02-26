@@ -1,6 +1,4 @@
-Sequel.connect(ENV['TABULA_API_DATABASE_URL'])
-
-module TabulaAPI
+module TabulaApi
   module Uploaders
     class DocumentUploader < ::CarrierWave::Uploader::Base
       def store_dir
@@ -13,10 +11,12 @@ module TabulaAPI
     end
   end
 
+  DB = Sequel.connect(ENV['TABULA_API_DATABASE_URL'])
+  Sequel::Model.plugin :json_serializer
+
   module Models
     class Document < Sequel::Model
       one_to_many :pages, :key => :document_id
-      mount_uploader(:path, Uploaders::DocumentUploader)
     end
 
     class Page < Sequel::Model(:document_pages)

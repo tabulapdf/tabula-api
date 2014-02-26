@@ -14,7 +14,7 @@ Sequel.migration do
       Integer :number, :null => false
       Integer :rotation, :null => false, :default => 0
 
-      foreign_key :document_id, :documents, :key => :id
+      foreign_key :document_id, :documents, :key => :id, :on_delete => :cascade
     end
   end
 end

@@ -1,3 +1,3 @@
 require 'lib/tabula_api'
 
-run TabulaAPI::REST
+run TabulaApi::REST

@@ -1,4 +1,9 @@
+require 'tmpdir'
+
 ENV['TABULA_API_DATABASE_URL'] = "jdbc:sqlite:#{File.expand_path('test.db', File.dirname(__FILE__))}"
+ENV['TABULA_DATA_DIR'] = Dir.mktmpdir
+
+puts ENV['TABULA_DATA_DIR']
 
 require_relative '../lib/tabula_api'
 require 'sequel'
@@ -15,6 +20,8 @@ FixtureDependencies.fixture_path = File.expand_path('fixtures',
 # the constant by itself
 include TabulaApi::Models
 
+#TabulaApi::DB.loggers << Logger.new($stderr)
+
 class TabulaApiTestCase < MiniTest::Test
   include Rack::Test::Methods
 
@@ -26,6 +33,10 @@ class TabulaApiTestCase < MiniTest::Test
 
   def app
     TabulaApi::REST
+  end
+
+  def setup
+    Document.truncate
   end
 
 end
@@ -41,10 +52,72 @@ class TabulaApiTests < TabulaApiTestCase
     assert_equal '8cf52024-1ab8-4ec2-8fb2-c7605417e564', resp.first['uuid']
   end
 
-  def test_upload_document
-    file = fixture_file_upload('fixtures/sample.pdf', 'application/pdf')
+  def test_upload_document_wrong_media_type
+    file = Rack::Test::UploadedFile.new(File.expand_path('fixtures/documents.yml',
+                                                         File.dirname(__FILE__)),
+                                        'application/pdf')
+
     post '/documents', :file => file
-    raise "not finished"
+    assert_equal 415, last_response.status
   end
 
+  def test_get_document_wrong_pattern
+    FixtureDependencies.load(:document__document1)
+    get '/documents/foobarquuxor'
+    assert_equal 404, last_response.status
+  end
+
+  def test_get_document_404
+    FixtureDependencies.load(:document__document1)
+    get '/documents/deadbeef-1ab8-4ec2-8fb2-c7605417e564'
+    assert_equal 404, last_response.status
+  end
+
+  def test_download_original_document
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    # retrieve uploaded document
+    get "/documents/#{doc['uuid']}/document"
+
+    assert_equal 'attachment; filename=sample.pdf', last_response.headers['Content-Disposition']
+    assert_equal File.size(upload_file_path), last_response.headers['Content-Length'].to_i
+    assert_equal 'application/pdf', last_response.headers['Content-Type']
+  end
+
+  def test_delete_document
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    # get doc object from DB before deleting
+    doc_model = TabulaApi::Models::Document.first(uuid: doc['uuid'])
+
+    delete "/documents/#{doc['uuid']}"
+
+    assert !File.exists?(doc_model.document_path)
+    assert_equal 0, TabulaApi::Models::Page.where(document_id: doc_model.id).count
+  end
+
+  def test_upload_pdf
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    # retrieve uploaded document
+    get "/documents/#{doc['uuid']}"
+    doc = JSON.parse(last_response.body)
+
+    assert_equal 5, doc['pages'].size
+  end
 end

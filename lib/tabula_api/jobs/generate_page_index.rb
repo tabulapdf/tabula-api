@@ -1,7 +1,3 @@
-require 'tabula'
-
-require_relative '../executor.rb'
-
 class GeneratePageIndexJob < Tabula::Background::Job
   # args: (:file, :output_dir)
   # Generate pages.json

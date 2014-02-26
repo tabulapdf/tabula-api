@@ -153,49 +153,6 @@ module Tabula
           job.uuid
         end
       end
-
     end
-  end
-end
-
-
-if __FILE__ == $0
-
-  class K < Tabula::Background::Job
-    def perform
-      options[:start].upto(options[:end]) do |i|
-        puts "I'm #{@uuid}: #{i}/#{options[:end]}"
-        at(i, options[:end])
-        sleep 1
-      end
-      @uuid
-    end
-  end
-
-  class J < Tabula::Background::Job
-    def perform
-      options[:start].upto(options[:end]) do |i|
-        puts "I'm #{@uuid}: #{i}/#{options[:end]}"
-        at(i, options[:end])
-        raise 'caca'
-        sleep 1
-      end
-    end
-  end
-
-  j1 = K.create(:start => 1, :end => 20)
-  j2 = K.create(:start => 25, :end => 40)
-  j3 = J.create(:start => 1, :end => 6)
-
-  Thread.new do
-    loop {
-      puts "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-
-      # puts "STATUS OF J1 IN EXECUTOR: #{Tabula::Background::JobExecutor.get(j1)}"
-      # puts "STATUS OF J2 IN EXECUTOR: #{Tabula::Background::JobExecutor.get(j2)}"
-      # puts "STATUS OF J3 IN EXECUTOR: #{Tabula::Background::JobExecutor.get(j3)}"
-      puts Tabula::Background::JobExecutor.instance.futures_jobs.inspect
-      sleep 1
-    }
   end
 end

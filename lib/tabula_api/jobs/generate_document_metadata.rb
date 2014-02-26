@@ -1,8 +1,4 @@
 require 'json'
-require 'jruby/synchronized'
-
-require 'tabula'
-require_relative '../executor.rb'
 
 class GenerateDocumentMetadataJob < Tabula::Background::Job
   include JRuby::Synchronized

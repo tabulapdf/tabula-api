@@ -1,6 +1,4 @@
 #!/usr/bin/env jruby -J-Djava.awt.headless=true
-require 'minitest'
-require 'minitest/autorun'
 require 'tmpdir'
 
 ENV['TABULA_API_DATABASE_URL'] = "jdbc:sqlite:#{File.expand_path('test.db', File.dirname(__FILE__))}"
@@ -9,6 +7,13 @@ ENV['TABULA_DATA_DIR'] = Dir.mktmpdir
 puts ENV['TABULA_DATA_DIR']
 
 require_relative '../lib/tabula_api'
+# need to bring the models to the top level namespace
+# fixture_dependencies isn't smart enough to resolve
+# the constant by itself
+include TabulaApi::Models
+
+require 'minitest'
+require 'minitest/autorun'
 require 'sequel'
 require 'rack/test'
 require 'fixture_dependencies'
@@ -16,14 +21,9 @@ require 'fixture_dependencies'
 FixtureDependencies.fixture_path = File.expand_path('fixtures',
                                                     File.dirname(__FILE__))
 
-# need to bring the models to the top level namespace
-# fixture_dependencies isn't smart enough to resolve
-# the constant by itself
-include TabulaApi::Models
-
 TabulaApi::DB.loggers << Logger.new($stderr)
 
-class TabulaApiTestCase < MiniTest::Unit::TestCase
+class TabulaApiTestCase < MiniTest::Test
   include Rack::Test::Methods
 
   def run(*args, &block)
@@ -41,6 +41,7 @@ class TabulaApiTestCase < MiniTest::Unit::TestCase
   end
 
 end
+
 
 class TabulaApiTests < TabulaApiTestCase
 
@@ -128,7 +129,7 @@ class TabulaApiTests < TabulaApiTestCase
     assert_equal 0, TabulaApi::Models::Page.where(document: TabulaApi::Models::Document.first(uuid: '8cf52024-1ab8-4ec2-8fb2-c7605417e564')).count
   end
 
-  def test_extract_tables
+  def test_extract_tables_as_csv
     upload_file_path = File.expand_path('fixtures/sample.pdf',
                                         File.dirname(__FILE__))
     file = Rack::Test::UploadedFile.new(upload_file_path,
@@ -136,20 +137,19 @@ class TabulaApiTests < TabulaApiTestCase
     post '/documents', :file => file
     doc = JSON.parse(last_response.body)
 
-    coords = { 'coords' =>  [ {"x1" => 16.97142857142857,
-                               "x2" => 762.3000000000001,
-                               "y1" => 53.74285714285715,
-                               "y2" => 548.7428571428571,
-                               "page" => 1},
-                              {"x1" => 16.97142857142857,
-                               "x2" => 762.3000000000001,
-                               "y1" => 53.74285714285715,
-                               "y2" => 548.7428571428571,
-                               "page" => 1}]
+    coords = { 'coords' =>  [ {"left" => 16.97142857142857,
+                               "right" => 762.3000000000001,
+                               "top" => 53.74285714285715,
+                               "bottom" => 548.7428571428571,
+                               "page" => 1} ]
              }
 
-    post "/documents/#{doc['uuid']}/tables", JSON.dump(coords), "CONTENT_TYPE" => 'application/json'
-    puts last_response.inspect
+    post "/documents/#{doc['uuid']}/tables?extraction_method=original",
+         JSON.dump(coords),
+         "CONTENT_TYPE" => 'application/json',
+         "HTTP_ACCEPT" => 'application/json'
+
+    puts JSON.parse(last_response.body).inspect
 
   end
 end

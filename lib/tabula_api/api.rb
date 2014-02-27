@@ -3,6 +3,9 @@ module TabulaApi
     version 'v1', using: :header, vendor: 'tabula'
     format :json
 
+    content_type :csv, 'text/csv'
+    formatter :csv, lambda { |tables, env| tables.flatten.inject('') { |o, table| o += table.to_csv } }
+
     helpers do
       def job_executor
       end
@@ -19,6 +22,10 @@ module TabulaApi
 
       def doc_to_h(doc)
         doc.values.merge(:pages => doc.pages.map(&:values))
+      end
+
+      def logger
+        REST.logger
       end
     end
 
@@ -73,16 +80,34 @@ module TabulaApi
         end
         post 'tables' do
           doc = get_document(params[:uuid])
-          puts Tabula::Extraction::ObjectExtractor.new(doc.document_path).method(:extract).source_location
           extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
+          extraction_method = params[:extraction_method] || 'guess'
+
+          logger.info "Requested extraction method: #{extraction_method}"
 
           params[:coords]
             .sort_by { |c| c[:page]}
             .group_by { |c| c[:page] }
-            .each { |page_number, coords|
+            .each
+            .inject([]){ |tables, (page_number, coords)|
 
             page = extractor.extract_page(page_number)
-            puts page.inspect
+
+            tables += coords.map { |coord|
+              area = page.get_area([coord['top'],
+                                    coord['left'],
+                                    coord['bottom'],
+                                    coord['right']])
+
+              if extraction_method == 'spreadsheet' \
+                 || (extraction_method == 'guess' && area.is_tabular?)
+                logger.info "Using extraction method: spreadsheet"
+                (spreadsheets = area.spreadsheets).empty? ? Spreadsheet.empty(page) : spreadsheets.inject(&:+)
+              else
+                logger.info "Using extraction method: original"
+                area.make_table
+              end
+            }
           }
 
         end

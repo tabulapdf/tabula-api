@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
 
   s.platform = 'java'
 
-  s.files         = `git ls-files`.split("\n") + shared_libs.map.reject { |f| !File.exists?(f) }
+  s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,features}/*`.split("\n")
   s.require_paths = ["lib"]
 

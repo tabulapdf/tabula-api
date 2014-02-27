@@ -4,7 +4,7 @@ module TabulaApi
     format :json
 
     content_type :csv, 'text/csv'
-    formatter :csv, lambda { |tables, env| tables.flatten.inject('') { |o, table| o += table.to_csv } }
+    formatter :csv, lambda { |tables, env| tables.inject('') { |o, table| o += table.to_csv } }
 
     helpers do
       def job_executor
@@ -86,10 +86,9 @@ module TabulaApi
           logger.info "Requested extraction method: #{extraction_method}"
 
           params[:coords]
-            .sort_by { |c| c[:page]}
+            .sort_by { |c| c[:page] }
             .group_by { |c| c[:page] }
-            .each
-            .inject([]){ |tables, (page_number, coords)|
+            .inject([]) { |tables, (page_number, coords)|
 
             page = extractor.extract_page(page_number)
 
@@ -108,8 +107,7 @@ module TabulaApi
                 area.make_table
               end
             }
-          }
-
+          }.flatten(1)
         end
 
         resource :pages do

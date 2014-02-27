@@ -141,7 +141,12 @@ class TabulaApiTests < TabulaApiTestCase
                                "right" => 762.3000000000001,
                                "top" => 53.74285714285715,
                                "bottom" => 548.7428571428571,
-                               "page" => 1} ]
+                               "page" => 1},
+                              {"left" => 16.97142857142857,
+                               "right" => 762.3000000000001,
+                               "top" => 53.74285714285715,
+                               "bottom" => 548.7428571428571,
+                               "page" => 2}]
              }
 
     post "/documents/#{doc['uuid']}/tables?extraction_method=original",

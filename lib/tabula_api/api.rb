@@ -32,8 +32,8 @@ module TabulaApi
       desc "Upload a PDF"
       params do
         requires :file,
-                 :type => Rack::Multipart::UploadedFile,
-                 :desc => 'PDF Document'
+                 type: Rack::Multipart::UploadedFile,
+                 desc: 'PDF Document'
       end
       post do
         error!('Unsupported media type', 415) unless is_valid_pdf?(params[:file][:tempfile].path)
@@ -64,6 +64,39 @@ module TabulaApi
         delete do
           doc = get_document(params[:uuid])
           doc.destroy
+        end
+
+        desc "Extract tables"
+        params do
+          requires :coords, type: Array
+          optional :extraction_method, type: String, regexp: /^(original|spreadsheet|guess)$/
+        end
+        post 'tables' do
+          doc = get_document(params[:uuid])
+          puts Tabula::Extraction::ObjectExtractor.new(doc.document_path).method(:extract).source_location
+          extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
+
+          params[:coords]
+            .sort_by { |c| c[:page]}
+            .group_by { |c| c[:page] }
+            .each { |page_number, coords|
+
+            page = extractor.extract_page(page_number)
+            puts page.inspect
+          }
+
+        end
+
+        resource :pages do
+          desc "Delete a page from a document"
+          params do
+            requires :number, type: Integer, desc: 'Page Number'
+          end
+          delete ':number', requirements: { number: /\d+/ } do
+            doc = get_document(params[:uuid])
+            page = doc.pages_dataset.where(number: params[:number]).first
+            page.destroy
+          end
         end
       end
     end

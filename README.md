@@ -1,7 +1,7 @@
 Tabula API
 ==========
 
-TODO Write stuff
+**Important**: `tabula-api` is not yet functional.
 
 ## Methods
 

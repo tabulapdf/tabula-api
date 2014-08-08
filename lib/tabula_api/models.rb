@@ -1,7 +1,7 @@
 require 'securerandom'
 
 module TabulaApi
-  DB = Sequel.connect(ENV['TABULA_API_DATABASE_URL'])
+  DB = Sequel.connect("jdbc:sqlite://" + File.join(Settings.getDataDir, 'tabula_api.db'))
   Sequel::Model.plugin :json_serializer
 
   module Models

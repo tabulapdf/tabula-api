@@ -62,7 +62,6 @@ module TabulaApi
         get 'document' do
           doc = get_document(params[:uuid])
           content_type 'application/pdf'
-          header['Content-Disposition'] = "attachment; filename=#{doc.path}"
           env['api.format'] = :binary
           File.open(doc.document_path).read
         end

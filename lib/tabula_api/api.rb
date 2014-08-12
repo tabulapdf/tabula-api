@@ -24,6 +24,28 @@ module TabulaApi
         doc.values.merge(:pages => doc.pages.map(&:values))
       end
 
+      ##
+      # page: a Tabula::Page instance
+      # coords: coordinates specification [{'top' => .., 'left' => ..., 'bottom' => ..., 'right' => ... }, ...]
+      # extraction_method: original|spreadsheet|guess
+      def extract_tables_from_page(page, coords, extraction_method)
+        coords.map { |coord|
+          area = page.get_area([coord['top'],
+                                coord['left'],
+                                coord['bottom'],
+                                coord['right']])
+
+          if extraction_method == 'spreadsheet' \
+             || (extraction_method == 'guess' && area.is_tabular?)
+            logger.info "Using extraction method: spreadsheet"
+            (spreadsheets = area.spreadsheets).empty? ? Spreadsheet.empty(page) : spreadsheets.inject(&:+)
+          else
+            logger.info "Using extraction method: original"
+            area.get_table
+          end
+        }
+      end
+
       def logger
         REST.logger
       end
@@ -87,25 +109,12 @@ module TabulaApi
           params[:coords]
             .sort_by { |c| c[:page] }
             .group_by { |c| c[:page] }
-            .inject([]) { |tables, (page_number, coords)|
+            .flat_map { |page_number, coords|
 
             page = extractor.extract_page(page_number)
 
-            tables += coords.map { |coord|
-              area = page.get_area([coord['top'],
-                                    coord['left'],
-                                    coord['bottom'],
-                                    coord['right']])
+            extract_tables_from_page(page, coords, extraction_method)
 
-              if extraction_method == 'spreadsheet' \
-                 || (extraction_method == 'guess' && area.is_tabular?)
-                logger.info "Using extraction method: spreadsheet"
-                (spreadsheets = area.spreadsheets).empty? ? Spreadsheet.empty(page) : spreadsheets.inject(&:+)
-              else
-                logger.info "Using extraction method: original"
-                area.make_table
-              end
-            }
           }.flatten(1)
         end
 
@@ -118,6 +127,24 @@ module TabulaApi
             doc = get_document(params[:uuid])
             page = doc.pages_dataset.where(number: params[:number]).first
             page.destroy
+          end
+
+          desc 'Extract tables from this page'
+          params do
+            requires :coords, type: Array
+            optional :extraction_method, type: String, regexp: /^(original|spreadsheet|guess)$/
+          end
+          post ':number/tables' do
+            doc = get_document(params[:uuid])
+            p = doc.pages_dataset.where(number: params[:number]).first
+            error!('Not found', 404) if p.nil?
+
+            extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
+            extraction_method = params[:extraction_method] || 'guess'
+
+            page = extractor.extract_page(p.number)
+
+            extract_tables_from_page(page, params[:coords], extraction_method)
           end
         end
       end

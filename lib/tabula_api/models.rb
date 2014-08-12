@@ -1,7 +1,7 @@
 require 'securerandom'
 
 module TabulaApi
-  DB = Sequel.connect("jdbc:sqlite://" + File.join(Settings.getDataDir, 'tabula_api.db'))
+  DB = Sequel.connect(ENV['TABULA_API_DATABASE_URL'] || ("jdbc:sqlite://" + File.join(Settings.getDataDir, 'tabula_api.db')))
   Sequel::Model.plugin :json_serializer
 
   module Models
@@ -34,7 +34,8 @@ module TabulaApi
         def new_from_upload(uploaded_file)
           doc = self.create(:uuid => SecureRandom.uuid,
                             :path => uploaded_file[:filename],
-                            :uploaded_file => uploaded_file[:tempfile].path)
+                            :uploaded_file => uploaded_file[:tempfile].path,
+                            :size => uploaded_file[:tempfile].size)
           Tabula::Extraction::PagesInfoExtractor.new(doc.document_path).pages.each do |p|
             doc.add_page(Page.new(:width => p.width,
                                   :height => p.height,

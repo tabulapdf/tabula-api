@@ -177,4 +177,39 @@ class TabulaApiTests < TabulaApiTestCase
 
   end
 
+  def test_autodetected_tables
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    get "/documents/#{doc['uuid']}/tables.json",
+         "CONTENT_TYPE" => 'application/json'
+    expected = [
+                [[18.0, 54.0, 744, 495]], 
+                [[18.0, 54.0, 744, 495]], 
+                [[18.0, 54.0, 744, 495]], 
+                [[18.0, 54.0, 744, 495]], 
+                [[18.0, 54.0, 744, 449]]]
+    assert_equal expected, JSON.parse(last_response.body)
+  end
+
+  def test_autodetected_tables_from_page
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    get "/documents/#{doc['uuid']}/pages/1/tables.json",
+         "CONTENT_TYPE" => 'application/json'
+
+    expected = [[18.0, 54.0, 744, 495]]
+
+    assert_equal expected, JSON.parse(last_response.body)
+  end
+
 end

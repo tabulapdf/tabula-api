@@ -29,7 +29,7 @@ module TabulaApi
       # coords: coordinates specification [{'top' => .., 'left' => ..., 'bottom' => ..., 'right' => ... }, ...]
       # extraction_method: original|spreadsheet|guess
       def extract_tables_from_page(page, coords, extraction_method)
-        coords.map { |coord|
+        coords.map do |coord|
           area = page.get_area([coord['top'],
                                 coord['left'],
                                 coord['bottom'],
@@ -43,7 +43,11 @@ module TabulaApi
             logger.info "Using extraction method: original"
             area.get_table
           end
-        }
+        end
+      end
+
+      def autodetect_tables_from_page(page)
+
       end
 
       def logger
@@ -63,6 +67,7 @@ module TabulaApi
         requires :file,
                  type: Rack::Multipart::UploadedFile,
                  desc: 'PDF Document'
+        optional :autodetect, type: Boolean, desc: "Should we attempt to auto-detect tables on the page?" #N.B. was "autodetect-tables in Tabula(-web)"
       end
       post do
         error!('Unsupported media type', 415) unless is_valid_pdf?(params[:file][:tempfile].path)
@@ -94,6 +99,20 @@ module TabulaApi
           doc.destroy
         end
 
+        desc "Autodetect tables in this document."
+        get '/tables' do 
+          doc = get_document(params[:uuid])
+          extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
+          doc.pages_dataset.map do |p|
+            if p.nil?
+              []
+            else
+              page = extractor.extract_page(p.number)
+              page.spreadsheet_areas.map{|rect| rect.dims(:left, :top, :width, :height)}
+            end
+          end
+        end
+
         desc "Extract tables"
         params do
           requires :coords, type: Array
@@ -109,13 +128,13 @@ module TabulaApi
           params[:coords]
             .sort_by { |c| c[:page] }
             .group_by { |c| c[:page] }
-            .flat_map { |page_number, coords|
+            .flat_map do |page_number, coords|
 
             page = extractor.extract_page(page_number)
 
             extract_tables_from_page(page, coords, extraction_method)
 
-          }.flatten(1)
+          end.flatten(1)
         end
 
         resource :pages do
@@ -129,9 +148,25 @@ module TabulaApi
             page.destroy
           end
 
+          desc "Autodetect tables on this page"
+          params do 
+            requires :number, type: Integer, desc: 'Page Number'
+          end
+          get ':number/tables' do 
+            doc = get_document(params[:uuid])
+            p = doc.pages_dataset.where(number: params[:number]).first
+            error!('Not found', 404) if p.nil?
+
+            extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
+            page = extractor.extract_page(p.number)
+
+            page.spreadsheet_areas.map{|rect| rect.dims(:left, :top, :width, :height)}
+          end
+
           desc 'Extract tables from this page'
           params do
             requires :coords, type: Array
+            requires :number, type: Integer, desc: 'Page Number'
             optional :extraction_method, type: String, regexp: /^(original|spreadsheet|guess)$/
           end
           post ':number/tables' do
@@ -146,6 +181,7 @@ module TabulaApi
 
             extract_tables_from_page(page, params[:coords], extraction_method)
           end
+
         end
       end
     end

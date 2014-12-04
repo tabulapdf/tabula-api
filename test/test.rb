@@ -151,8 +151,9 @@ class TabulaApiTests < TabulaApiTestCase
          JSON.dump(coords),
          "CONTENT_TYPE" => 'application/json'
 
-    #puts JSON.parse(last_response.body).inspect
+    # TODO add assertions
 
+    #puts JSON.parse(last_response.body).inspect
   end
 
   def test_extract_tables_from_document_page
@@ -173,7 +174,28 @@ class TabulaApiTests < TabulaApiTestCase
          JSON.dump(coords),
          "CONTENT_TYPE" => 'application/json'
 
-    #puts JSON.parse(last_response.body).inspect
+    puts JSON.parse(last_response.body).inspect
+    # TODO add assertions
+  end
+
+  def test_get_table_structure_from_document_page
+    upload_file_path = File.expand_path('fixtures/sample.pdf',
+                                        File.dirname(__FILE__))
+    file = Rack::Test::UploadedFile.new(upload_file_path,
+                                        'application/pdf')
+    post '/documents', :file => file
+    doc = JSON.parse(last_response.body)
+
+    coords = {
+      'coords' =>  [ {"left" => 16.97142857142857,
+                      "right" => 762.3000000000001,
+                      "top" => 53.74285714285715,
+                      "bottom" => 548.7428571428571}]
+    }
+
+    post "/documents/#{doc['uuid']}/pages/1/structure.json",
+         JSON.dump(coords),
+         "CONTENT_TYPE" => 'application/json'
 
   end
 

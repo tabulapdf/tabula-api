@@ -40,7 +40,7 @@ module TabulaApi
             doc.add_page(Page.new(:width => p.width,
                                   :height => p.height,
                                   :rotation => p.rotation,
-                                  :number => p.number_one_indexed))
+                                  :number => p.number))
           end
           doc
         end

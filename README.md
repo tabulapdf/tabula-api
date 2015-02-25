@@ -41,6 +41,9 @@ DELETE /documents/:uuid/pages/:number
 
 ## Installation
 
+sqlite3 ../../.tabula/tabula_api.db
+bundle exec sequel -m db/migrations/ jdbc:sqlite:../../.tabula/tabula_api.db
+
 ### Run dev server
 
 ```

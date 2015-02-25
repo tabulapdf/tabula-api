@@ -31,9 +31,9 @@ module TabulaApi
       def extract_tables_from_page(page, coords, extraction_method)
         coords.map do |coord|
           area = page.get_area([coord['top'],
-                                coord['left'],
-                                coord['bottom'],
-                                coord['right']])
+                               coord['left'],
+                               coord['bottom'],
+                               coord['right']])
 
           if extraction_method == 'spreadsheet' \
              || (extraction_method == 'guess' && area.is_tabular?)
@@ -100,7 +100,7 @@ module TabulaApi
         end
 
         desc "Autodetect tables in this document."
-        get '/tables' do 
+        get '/tables' do
           doc = get_document(params[:uuid])
           extractor = Tabula::Extraction::ObjectExtractor.new(doc.document_path)
           doc.pages_dataset.map do |p|
@@ -149,10 +149,10 @@ module TabulaApi
           end
 
           desc "Autodetect tables on this page"
-          params do 
+          params do
             requires :number, type: Integer, desc: 'Page Number'
           end
-          get ':number/tables' do 
+          get ':number/tables' do
             doc = get_document(params[:uuid])
             p = doc.pages_dataset.where(number: params[:number]).first
             error!('Not found', 404) if p.nil?
@@ -181,7 +181,6 @@ module TabulaApi
 
             extract_tables_from_page(page, params[:coords], extraction_method)
           end
-
         end
       end
     end
